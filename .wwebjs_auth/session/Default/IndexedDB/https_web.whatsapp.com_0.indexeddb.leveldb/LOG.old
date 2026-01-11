@@ -1,0 +1,31 @@
+2026/01/12-00:07:42.291 55f8 Reusing MANIFEST C:\laragon\www\panel-bot-whatsapp\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/01/12-00:07:42.292 55f8 Recovering log #1970
+2026/01/12-00:07:42.294 55f8 Reusing old log C:\laragon\www\panel-bot-whatsapp\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/001970.log 
+2026/01/12-00:07:43.528 fb0 Level-0 table #1984: started
+2026/01/12-00:07:43.534 fb0 Level-0 table #1984: 52227 bytes OK
+2026/01/12-00:07:43.537 fb0 Delete type=0 #1970
+2026/01/12-00:07:43.538 55f8 Manual compaction at level-0 from '\x00\xf1\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\xf2\x00\x00\x00' @ 0 : 0; will stop at (end)
+2026/01/12-00:07:43.582 4c9c Compacting 1@1 + 10@2 files
+2026/01/12-00:07:43.638 4c9c Generated table #1985@1: 84617 keys, 2233053 bytes
+2026/01/12-00:07:43.688 4c9c Generated table #1986@1: 89371 keys, 2307604 bytes
+2026/01/12-00:07:43.718 4c9c Generated table #1987@1: 18127 keys, 2194204 bytes
+2026/01/12-00:07:43.738 4c9c Generated table #1988@1: 1778 keys, 2157005 bytes
+2026/01/12-00:07:43.758 4c9c Generated table #1989@1: 1894 keys, 2155027 bytes
+2026/01/12-00:07:43.787 4c9c Generated table #1990@1: 12568 keys, 2186827 bytes
+2026/01/12-00:07:43.823 4c9c Generated table #1991@1: 24463 keys, 2238617 bytes
+2026/01/12-00:07:43.847 4c9c Generated table #1992@1: 36680 keys, 2174770 bytes
+2026/01/12-00:07:43.889 4c9c Generated table #1993@1: 109573 keys, 2261588 bytes
+2026/01/12-00:07:43.902 4c9c Generated table #1994@1: 29985 keys, 624576 bytes
+2026/01/12-00:07:43.902 4c9c Compacted 1@1 + 10@2 files => 20533271 bytes
+2026/01/12-00:07:43.903 4c9c compacted to: files[ 0 0 10 0 0 0 0 ]
+2026/01/12-00:07:43.904 4c9c Delete type=2 #1972
+2026/01/12-00:07:43.904 4c9c Delete type=2 #1973
+2026/01/12-00:07:43.904 4c9c Delete type=2 #1974
+2026/01/12-00:07:43.904 4c9c Delete type=2 #1975
+2026/01/12-00:07:43.904 4c9c Delete type=2 #1976
+2026/01/12-00:07:43.904 4c9c Delete type=2 #1977
+2026/01/12-00:07:43.904 4c9c Delete type=2 #1978
+2026/01/12-00:07:43.904 4c9c Delete type=2 #1979
+2026/01/12-00:07:43.904 4c9c Delete type=2 #1980
+2026/01/12-00:07:43.904 4c9c Delete type=2 #1981
+2026/01/12-00:07:43.904 4c9c Delete type=2 #1984
