@@ -1,5 +1,3 @@
-import { whatsappClient } from "./client.js";
-
 import { normalizePhone } from "../../utils/phone.js";
 import { getGroupAdmins, isGroupAdmin } from "../../utils/groupAdmin.js";
 import { getAllPayments } from "../../repositories/paymentRepository.js";
@@ -31,9 +29,14 @@ import {
   updateList,
 } from "../../repositories/listRepository.js";
 
-export const initWhatsApp = () => {
-  whatsappClient.on("message", async (message) => {
+export const bindClientEvents = (client) => {
+  client.on("message", async (message) => {
+    // Avoid handling status broadcasts
+    if(message.from === 'status@broadcast') return;
+
     const chat = await message.getChat();
+    // Only work in groups for now as per original logic? Or check original? 
+    // Original: if (!chat.isGroup) return;
     if (!chat.isGroup) return;
 
     const textRaw = message.body.trim();
@@ -42,7 +45,16 @@ export const initWhatsApp = () => {
     const sender = await message.getContact();
     const senderNumber = normalizePhone(sender.number);
 
-    const setting = await getSetting();
+    // Default setting if DB fails?
+    let setting;
+    try {
+        setting = await getSetting();
+        if(!setting) setting = {}; // Fallback
+    } catch(e) { 
+        console.error("Error fetching settings", e);
+        setting = {};
+    }
+
     const isAdmin = await isGroupAdmin(chat, message);
 
     // =====================
@@ -51,26 +63,32 @@ export const initWhatsApp = () => {
     if (isAdmin) {
       if (text === "open") {
         await updateSetting({ ...setting, bot_open: true });
-        await chat.setMessagesAdminsOnly(false);
-       return message.reply(
-      "🎉 *Grup dibuka!* 🎉\n" +
-      "Halo bestie~ 💕\n" +
-      "Yuk order aplikasi premium favoritmu 📱✨"
-     
-);
+        // Handling error if bot is not admin?
+        try {
+            await chat.setMessagesAdminsOnly(false);
+            return message.reply(
+            "🎉 *Grup dibuka!* 🎉\n" +
+            "Halo bestie~ 💕\n" +
+            "Yuk order aplikasi premium favoritmu 📱✨"
+            );
+        } catch(e) {
+            return message.reply("❌ Gagal membuka grup. Pastikan Bot adalah Admin.");
+        }
       }
 
       if (text === "close") {
         await updateSetting({ ...setting, bot_open: false });
-        await chat.setMessagesAdminsOnly(true);
-        return message.reply(
-      "😴 *Grup ditutup dulu yaa~*\n" +
-      "Bot & admin lagi rehat sebentar.\n" +
-      "Sampai ketemu pas buka lagi 🤍"
-    );
+        try {
+            await chat.setMessagesAdminsOnly(true);
+            return message.reply(
+            "😴 *Grup ditutup dulu yaa~*\n" +
+            "Bot & admin lagi rehat sebentar.\n" +
+            "Sampai ketemu pas buka lagi 🤍"
+            );
+        } catch(e) {
+            return message.reply("❌ Gagal menutup grup. Pastikan Bot adalah Admin.");
+        }
       }
-
-
 
       if (text.startsWith(".addlist")) {
         const data = textRaw.replace(".addlist", "").trim();
@@ -118,6 +136,21 @@ export const initWhatsApp = () => {
         await updateList({ keyword, content });
         return message.reply(`✅ List *${keyword}* berhasil diupdate`);
       }
+ 
+      // =====================
+      // HIDETAG (h text)
+      // =====================
+      if (textRaw.startsWith("h ")) {
+          const content = textRaw.slice(2);
+          const participants = chat.participants.map(p => p.id._serialized);
+          
+          await chat.sendMessage(content, { 
+              mentions: participants 
+          });
+          // Delete command message to keep it clean? Optional.
+          // await message.delete(true); 
+          return;
+      }
 
       // =====================
       // ADD / UPDATE PAYMENT (IMAGE)
@@ -147,7 +180,11 @@ export const initWhatsApp = () => {
 
         const ext = media.mimetype.split("/")[1];
         const fileName = `${type}.${ext}`;
-        const filePath = path.join("src/assets/payment", fileName);
+        // Ensure dir exists
+        const payDir = path.join(process.cwd(), "src/assets/payment");
+        if(!fs.existsSync(payDir)) fs.mkdirSync(payDir, { recursive: true });
+        
+        const filePath = path.join(payDir, fileName);
 
         await fs.promises.writeFile(
           filePath,
@@ -155,7 +192,7 @@ export const initWhatsApp = () => {
         );
 
         await upsertPayment({
-          type,
+          type: type.toLowerCase(), // Store lowercase for consistency
           label: type.toUpperCase(),
           image: fileName,
           caption: captionText,
@@ -191,9 +228,7 @@ export const initWhatsApp = () => {
       );
     }
 
-
-
-    if (!setting.bot_open && !isAdmin) {
+    if (setting.bot_open === false && !isAdmin) {
       return message.reply("🙏 Bot sedang ditutup");
     }
 
@@ -203,8 +238,6 @@ export const initWhatsApp = () => {
     if (text === ".antimenu") {
       return message.reply(antiMenu);
     }
-
-
 
     // Granular Toggles
     const toggleMap = {
@@ -265,7 +298,7 @@ ${productLines}
     // =====================
     // ORDER + TAG ADMIN
     // =====================
-    if (text.startsWith(".order")) {
+    if (text.startsWith("order")) {
       const keyword = text.split(" ")[1];
       if (!keyword) {
         return message.reply("❌ Gunakan .order <produk>");
@@ -298,7 +331,7 @@ ${productLines}
     // =====================
     // PAYMENT INFO
     // =====================
-    if (text === ".pay") {
+    if (text === "pay") {
       const payments = await getAllPayments();
 
       // 🔥 JIKA BELUM ADA PAYMENT
@@ -309,7 +342,7 @@ ${productLines}
       }
 
       for (const pay of payments) {
-        const imgPath = `src/assets/payment/${pay.image}`;
+        const imgPath = path.join(process.cwd(), `src/assets/payment/${pay.image}`);
         if (!fs.existsSync(imgPath)) continue;
 
         const media = MessageMedia.fromFilePath(imgPath);
@@ -326,24 +359,20 @@ ${productLines}
     }
 
     if (text === ".allmenu") {
-      // Sending long message might need chunking or file? for now simple reply
       return message.reply(allMenu);
     }
 
-    if (text === "ping") {
-      return message.reply("pong cuantik");
+    if (text === "ping" || text === "bot") {
+      return message.reply("Helo ada yang bisa di bantu bub💃🏻 ?");
     }
 
     // =====================
     // ANTI SYSTEM (AUTO DELETE)
     // =====================
-
-    // =====================
-    // GRANULAR ANTI SYSTEM
-    // =====================
     if (!isAdmin) {
        const msg = textRaw.toLowerCase();
  
+       let shouldDelete = false;
        let violation = "";
 
        // 0. Anti Virtex (Payload/Long Text)
@@ -394,10 +423,8 @@ ${productLines}
           violation = "Youtube Link";
        }
 
-       // Antilink (General HTTP) - Paling terakhir karena paling umum
+       // Antilink (General HTTP)
        if (!shouldDelete && setting.anti_link && linkPatterns.http.test(msg)) {
-           // Exclude if it was matched by specific patterns but those features were OFF? 
-           // No, general antilink kills all links usually.
            shouldDelete = true;
            violation = "Link Terlarang";
        }
@@ -422,17 +449,19 @@ ${productLines}
     }
   });
 
-  whatsappClient.on("group_join", async (notification) => {
+  client.on("group_join", async (notification) => {
     // Only handle join events
     if (notification.type !== "add" && notification.type !== "invite") return;
 
     try {
       const setting = await getSetting();
+      if(!setting) return; 
+
       const chat = await notification.getChat();
       
       // Iterate over all recipients (support bulk add)
       for (const recipientId of notification.recipientIds) {
-        const contact = await whatsappClient.getContactById(recipientId);
+        const contact = await client.getContactById(recipientId);
         
         // =====================
         // SECURITY CHECKS
@@ -469,6 +498,4 @@ Jangan lupa baca deskripsi grup ya ~
       console.error("Error sending welcome message:", error);
     }
   });
-
-  whatsappClient.initialize();
 };

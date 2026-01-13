@@ -1,0 +1,60 @@
+
+
+<div class="max-w-md mx-auto mt-10">
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-8 text-center">
+        <h2 class="text-xl font-bold text-gray-800 mb-1">Scan QR Code</h2>
+        <p class="text-sm text-gray-500 mb-6">Open WhatsApp > Linked Devices > Link a Device</p>
+
+        <!-- QR Display Area -->
+        <div id="qr-container" class="bg-gray-50 border-2 border-dashed border-gray-200 rounded-lg p-4 mb-6 flex items-center justify-center min-h-[300px]">
+            <div id="loading" class="text-gray-400 flex flex-col items-center">
+                <svg class="animate-spin h-8 w-8 mb-2 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span class="text-sm">Waiting for QR Code...</span>
+            </div>
+            <div id="qrcode" class="hidden"></div>
+        </div>
+
+        <div id="status-message" class="text-sm text-blue-600 font-medium hidden">
+            <span class="flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                Connected Successfully!
+            </span>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+    const socket = io();
+    const sessionId = "<%= sessionId %>";
+    const qrContainer = document.getElementById('qrcode');
+    const loading = document.getElementById('loading');
+    const statusMsg = document.getElementById('status-message');
+
+    socket.on('qr', (data) => {
+        if (data.sessionId === sessionId) {
+            loading.classList.add('hidden');
+            qrContainer.classList.remove('hidden');
+            qrContainer.innerHTML = ""; // Clear previous
+            new QRCode(qrContainer, {
+                text: data.qr,
+                width: 256,
+                height: 256
+            });
+        }
+    });
+
+    socket.on('ready', (data) => {
+        if (data.sessionId === sessionId) {
+            qrContainer.classList.add('hidden');
+            statusMsg.classList.remove('hidden');
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 2000);
+        }
+    });
+</script>
+<%- %>
