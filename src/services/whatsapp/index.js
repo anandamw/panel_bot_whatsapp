@@ -1,5 +1,5 @@
 import { whatsappClient } from "./client.js";
-import { isWithinOperationalHour } from "../../utils/time.js";
+
 import { normalizePhone } from "../../utils/phone.js";
 import { getGroupAdmins, isGroupAdmin } from "../../utils/groupAdmin.js";
 import { getAllPayments } from "../../repositories/paymentRepository.js";
@@ -10,6 +10,10 @@ import {
   deletePayment,
   getPaymentByType,
 } from "../../repositories/paymentRepository.js";
+
+
+import { toxicList1, toxicList2, linkPatterns } from "../../utils/antiLists.js";
+import { simpleMenu, antiMenu, allMenu } from "../../utils/menuText.js";
 
 import path from "path";
 import fs from "fs";
@@ -24,6 +28,7 @@ import {
   getListByKeyword,
   addList,
   deleteList,
+  updateList,
 } from "../../repositories/listRepository.js";
 
 export const initWhatsApp = () => {
@@ -44,25 +49,28 @@ export const initWhatsApp = () => {
     // ADMIN COMMAND
     // =====================
     if (isAdmin) {
-      if (text === ".open") {
+      if (text === "open") {
         await updateSetting({ ...setting, bot_open: true });
-        return message.reply("✅ Bot dibuka");
+        await chat.setMessagesAdminsOnly(false);
+       return message.reply(
+      "🎉 *Grup dibuka!* 🎉\n" +
+      "Halo bestie~ 💕\n" +
+      "Yuk order aplikasi premium favoritmu 📱✨"
+     
+);
       }
 
-      if (text === ".close") {
+      if (text === "close") {
         await updateSetting({ ...setting, bot_open: false });
-        return message.reply("⛔ Bot ditutup");
+        await chat.setMessagesAdminsOnly(true);
+        return message.reply(
+      "😴 *Grup ditutup dulu yaa~*\n" +
+      "Bot & admin lagi rehat sebentar.\n" +
+      "Sampai ketemu pas buka lagi 🤍"
+    );
       }
 
-      if (text === "/force_on") {
-        await updateSetting({ ...setting, bot_mode: "FORCE_ON" });
-        return message.reply("⚡ FORCE_ON aktif");
-      }
 
-      if (text === "/force_off") {
-        await updateSetting({ ...setting, bot_mode: "FORCE_OFF" });
-        return message.reply("🛑 FORCE_OFF aktif");
-      }
 
       if (text.startsWith(".addlist")) {
         const data = textRaw.replace(".addlist", "").trim();
@@ -88,6 +96,27 @@ export const initWhatsApp = () => {
 
         await deleteList(keyword);
         return message.reply(`🗑️ List *${keyword}* dihapus`);
+      }
+
+      if (text.startsWith(".updatelist")) {
+        const data = textRaw.replace(".updatelist", "").trim();
+        const [keyPart, ...contentPart] = data.split("@");
+
+        if (!keyPart || contentPart.length === 0) {
+           return message.reply("❌ Format salah\n.updatelist keyword@BARU");
+        }
+
+        const keyword = keyPart.trim().toLowerCase();
+        const content = contentPart.join("@").trim();
+
+        // Check exist
+        const item = await getListByKeyword(keyword);
+        if (!item) {
+           return message.reply(`❌ List *${keyword}* tidak ditemukan`);
+        }
+
+        await updateList({ keyword, content });
+        return message.reply(`✅ List *${keyword}* berhasil diupdate`);
       }
 
       // =====================
@@ -162,22 +191,7 @@ export const initWhatsApp = () => {
       );
     }
 
-    // =====================
-    // MODE CHECK (CUSTOMER)
-    // =====================
-    if (setting.bot_mode === "FORCE_OFF" && !isAdmin) return;
 
-    if (setting.bot_mode === "AUTO" && !isAdmin) {
-      const active = isWithinOperationalHour(
-        setting.open_hour,
-        setting.close_hour
-      );
-      if (!active) {
-        return message.reply(
-          "🙏 Di luar jam operasional\n⏰ 08.00 – 22.00 WIB"
-        );
-      }
-    }
 
     if (!setting.bot_open && !isAdmin) {
       return message.reply("🙏 Bot sedang ditutup");
@@ -187,37 +201,35 @@ export const initWhatsApp = () => {
     // ANTI MENU
     // =====================
     if (text === ".antimenu") {
-      const antiMenu = `
-  ╭───── 私❛❛ *ANTI MENU*
-  │
-  │ ♡゙ Antich
-  │ ♡゙ Antiwame
-  │ ♡゙ Antilink
-  │ ♡゙ Antipl
-  │ ♡゙ Antitoxic1
-  │ ♡゙ Antitoxic2
-  │ ♡゙ Antilinktt
-  │ ♡゙ Antilinkyt
-  │ ♡゙ Antilinkgc
-  │
-  │ ⚙️ *Control*
-  │ ┆𖢷 .anti on
-  │ ┆𖢷 .anti off
-  │
-  ╰───────────────╯
-    `.trim();
-
       return message.reply(antiMenu);
     }
 
-    if (isAdmin && text === ".anti on") {
-      await updateSetting({ ...setting, anti_enabled: true });
-      return message.reply("🛡️ Anti system *AKTIF*");
-    }
 
-    if (isAdmin && text === ".anti off") {
-      await updateSetting({ ...setting, anti_enabled: false });
-      return message.reply("❌ Anti system *DIMATIKAN*");
+
+    // Granular Toggles
+    const toggleMap = {
+      ".antich": "anti_ch",
+      ".antiwame": "anti_wame",
+      ".antilink": "anti_link",
+      ".antipl": "anti_pl",
+      ".antiasing": "anti_asing",
+      ".antibot": "anti_bot",
+      ".antitoxic1": "anti_toxic_1",
+
+      ".antitoxic2": "anti_toxic_2",
+      ".antilinktt": "anti_link_tt",
+      ".antilinkyt": "anti_link_yt",
+      ".antilinkgc1": "anti_link_gc_1",
+      ".antilinkgc2": "anti_link_gc_2"
+    };
+
+    const cmdKey = Object.keys(toggleMap).find(k => text.startsWith(k + " "));
+    if (isAdmin && cmdKey) {
+       const status = text.split(" ")[1];
+       const dbKey = toggleMap[cmdKey];
+       const val = status === "on";
+       await updateSetting({ ...setting, [dbKey]: val });
+       return message.reply(`✅ ${cmdKey} berhasil diatur ke *${status.toUpperCase()}*`);
     }
 
     // =====================
@@ -310,31 +322,12 @@ ${productLines}
     }
 
     if (text === ".menu") {
-      const menu = `
-      ╭─── 〔 🤖 BOT MENU 〕 ───╮
-      │
-      │ 📦 *PRODUK*
-      │ ┆𖢷 .list
-      │ ┆𖢷 .order <produk>
-      │
-      │ 💳 *PEMBAYARAN*
-      │ ┆𖢷 .pay
-      │
-      │ ℹ️ *INFO*
-      │ ┆𖢷 ketik *keyword produk*
-      │
-      │ 👑 *ADMIN*
-      │ ┆𖢷 .addlist keyword@isi
-      │ ┆𖢷 .dellist keyword
-      │ ┆𖢷 .addpay qris (dgn gambar)
-      │ ┆𖢷 .delpay qris
-      │ ┆𖢷 .open / .close
-      │
-      ╰───────────────╯
-      💖 Ketik perintah tanpa tanda *
-        `.trim();
+      return message.reply(simpleMenu);
+    }
 
-      return message.reply(menu);
+    if (text === ".allmenu") {
+      // Sending long message might need chunking or file? for now simple reply
+      return message.reply(allMenu);
     }
 
     if (text === "ping") {
@@ -345,51 +338,79 @@ ${productLines}
     // ANTI SYSTEM (AUTO DELETE)
     // =====================
 
-    if (setting.anti_enabled && !isAdmin) {
-      const msg = textRaw.toLowerCase();
+    // =====================
+    // GRANULAR ANTI SYSTEM
+    // =====================
+    if (!isAdmin) {
+       const msg = textRaw.toLowerCase();
+ 
+       let violation = "";
 
-      if (
-        msg.includes("http://") ||
-        msg.includes("https://") ||
-        msg.includes("wa.me") ||
-        msg.includes("chat.whatsapp.com")
-      ) {
-        try {
-          await message.delete(true);
-        } catch {}
+       // 0. Anti Virtex (Payload/Long Text)
+       if (setting.anti_pl && msg.length > 4000) {
+           shouldDelete = true;
+           violation = "Virtex / Teks Panjang";
+       }
 
-        return chat.sendMessage(
-          `⚠️ *ANTI LINK*\n@${senderNumber} link tidak diperbolehkan`,
-          { mentions: [sender] }
-        );
-      }
+       // 1. Check Toxic
+       if (setting.anti_toxic_1 && toxicList1.some(w => msg.includes(w))) {
+           shouldDelete = true; 
+           violation = "Toxic 1";
+       }
+       else if (setting.anti_toxic_2 && toxicList2.some(w => msg.includes(w))) {
+           shouldDelete = true;
+           violation = "Toxic 2";
+       }
 
-      const toxicWords = [
-        "anjing",
-        "kontol",
-        "kntl",
-        "bangsat",
-        "ngentot",
-        "jancok",
-        "goblok",
-        "memek",
-        "asu",
-        "puki",
-        "babi",
-        "otak",
-        "mmk",
-        "mmq",
-      ];
-      if (toxicWords.some((w) => msg.includes(w))) {
-        try {
-          await message.delete(true);
-        } catch {}
+       // 2. Check Links
+       // Antich (Channel)
+       if (!shouldDelete && setting.anti_ch && linkPatterns.channel.test(msg)) {
+          shouldDelete = true;
+          violation = "Channel Link";
+       }
 
-        return chat.sendMessage(
-          `🚫 *ANTI TOXIC*\n@${senderNumber} jaga kata-kata ya`,
-          { mentions: [sender] }
-        );
-      }
+       // Antiwame (Wa.me)
+       if (!shouldDelete && setting.anti_wame && linkPatterns.wame.test(msg)) {
+          shouldDelete = true;
+          violation = "Wa.me Link";
+       }
+
+       // Antilinkgc (Group)
+       if (!shouldDelete && (setting.anti_link_gc_1 || setting.anti_link_gc_2) && linkPatterns.group.test(msg)) {
+          shouldDelete = true;
+          violation = "Group Link";
+          // Logic for gc2 (Kick) could go here but skipping for safety
+       }
+
+        // Antilinktt (Tiktok)
+       if (!shouldDelete && setting.anti_link_tt && linkPatterns.tiktok.test(msg)) {
+          shouldDelete = true;
+          violation = "Tiktok Link";
+       }
+
+       // Antilinkyt (Youtube)
+       if (!shouldDelete && setting.anti_link_yt && linkPatterns.youtube.test(msg)) {
+          shouldDelete = true;
+          violation = "Youtube Link";
+       }
+
+       // Antilink (General HTTP) - Paling terakhir karena paling umum
+       if (!shouldDelete && setting.anti_link && linkPatterns.http.test(msg)) {
+           // Exclude if it was matched by specific patterns but those features were OFF? 
+           // No, general antilink kills all links usually.
+           shouldDelete = true;
+           violation = "Link Terlarang";
+       }
+
+       if (shouldDelete) {
+          try {
+             await message.delete(true);
+             await chat.sendMessage(`⚠️ *ANTI ${violation.toUpperCase()}*\n@${senderNumber} pesan dihapus.`, { mentions: [sender] });
+          } catch (e) {
+             console.log("Failed to delete message", e);
+          }
+          return;
+       }
     }
 
     // =====================
@@ -398,6 +419,54 @@ ${productLines}
     const item = await getListByKeyword(text);
     if (item) {
       return message.reply(item.content);
+    }
+  });
+
+  whatsappClient.on("group_join", async (notification) => {
+    // Only handle join events
+    if (notification.type !== "add" && notification.type !== "invite") return;
+
+    try {
+      const setting = await getSetting();
+      const chat = await notification.getChat();
+      
+      // Iterate over all recipients (support bulk add)
+      for (const recipientId of notification.recipientIds) {
+        const contact = await whatsappClient.getContactById(recipientId);
+        
+        // =====================
+        // SECURITY CHECKS
+        // =====================
+        if (setting.anti_bot && contact.isBusiness) {
+          // Kick bot
+          await chat.sendMessage(`⚠️ *ANTI BOT DETECTED*\nMaaf @${contact.number}, bot dilarang masuk sini.`, { mentions: [contact] });
+          await chat.removeParticipants([recipientId]);
+          continue; // Skip welcome
+        }
+
+        const countryCode = contact.number.substring(0, 2);
+        if (setting.anti_asing && countryCode !== "62" && countryCode !== "60") {
+           // Kick foreign number (Allow Indo & Malay only)
+           await chat.sendMessage(`⚠️ *ANTI ASING DETECTED*\nMaaf @${contact.number}, nomor luar negeri dilarang masuk.`, { mentions: [contact] });
+           await chat.removeParticipants([recipientId]);
+           continue; // Skip welcome
+        }
+
+        // Welcome Message
+        const welcomeText = `
+Welcome to *${chat.name}* 👋
+Halo @${contact.number}!
+
+Selamat bergabung!
+Jangan lupa baca deskripsi grup ya ~
+        `.trim();
+
+        // Send message with mention
+        await chat.sendMessage(welcomeText, { mentions: [contact] });
+      }
+
+    } catch (error) {
+      console.error("Error sending welcome message:", error);
     }
   });
 

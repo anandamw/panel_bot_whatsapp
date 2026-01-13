@@ -24,3 +24,10 @@ export const addList = async ({ keyword, title, content }) => {
 export const deleteList = async (keyword) => {
   await db.query("DELETE FROM lists WHERE keyword = ?", [keyword]);
 };
+
+export const updateList = async ({ keyword, content }) => {
+  await db.query("UPDATE lists SET content = ? WHERE keyword = ?", [
+    content,
+    keyword,
+  ]);
+};
