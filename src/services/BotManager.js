@@ -69,7 +69,9 @@ class BotManager {
              this.io.emit('log', { sessionId, message: 'Auth failure' });
         });
 
-        client.initialize();
+        client.initialize().catch(err => {
+            console.error(`Initialization failed for ${sessionId}:`, err.message);
+        });
         this.clients.set(sessionId, client);
         return client;
     }
