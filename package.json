@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "nodemon -r dotenv/config src/server.js",
     "start": "node -r dotenv/config src/server.js",
+    "pm2": "pm2 start src/server.js --name \"panel-bot\" --node-args=\"-r dotenv/config\"",
+    "pm2:stop": "pm2 stop \"panel-bot\"",
+    "pm2:logs": "pm2 logs \"panel-bot\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
