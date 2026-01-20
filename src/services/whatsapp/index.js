@@ -45,10 +45,10 @@ export const bindClientEvents = (client) => {
     const sender = await message.getContact();
     const senderNumber = normalizePhone(sender.number);
 
-    // Default setting if DB fails?
+    const groupId = chat.id._serialized;
     let setting;
     try {
-        setting = await getSetting();
+        setting = await getSetting(groupId);
         if(!setting) setting = {}; // Fallback
     } catch(e) { 
         console.error("Error fetching settings", e);
@@ -62,7 +62,7 @@ export const bindClientEvents = (client) => {
     // =====================
     if (isAdmin) {
       if (text === "open") {
-        await updateSetting({ ...setting, bot_open: true });
+        await updateSetting(groupId, { ...setting, bot_open: true });
         // Handling error if bot is not admin?
         try {
             await chat.setMessagesAdminsOnly(false);
@@ -77,7 +77,7 @@ export const bindClientEvents = (client) => {
       }
 
       if (text === "close") {
-        await updateSetting({ ...setting, bot_open: false });
+        await updateSetting(groupId, { ...setting, bot_open: false });
         try {
             await chat.setMessagesAdminsOnly(true);
             return message.reply(
@@ -101,7 +101,7 @@ export const bindClientEvents = (client) => {
         const keyword = keyPart.trim().toLowerCase();
         const content = contentPart.join("@").trim();
 
-        await addList({ keyword, title: keyword, content });
+        await addList({ groupId, keyword, title: keyword, content });
 
         return message.reply(`✅ List *${keyword}* berhasil disimpan`);
       }
@@ -112,7 +112,7 @@ export const bindClientEvents = (client) => {
           return message.reply("❌ Gunakan .dellist keyword");
         }
 
-        await deleteList(keyword);
+        await deleteList(groupId, keyword);
         return message.reply(`🗑️ List *${keyword}* dihapus`);
       }
 
@@ -128,12 +128,12 @@ export const bindClientEvents = (client) => {
         const content = contentPart.join("@").trim();
 
         // Check exist
-        const item = await getListByKeyword(keyword);
+        const item = await getListByKeyword(groupId, keyword);
         if (!item) {
            return message.reply(`❌ List *${keyword}* tidak ditemukan`);
         }
 
-        await updateList({ keyword, content });
+        await updateList({ groupId, keyword, content });
         return message.reply(`✅ List *${keyword}* berhasil diupdate`);
       }
  
@@ -192,6 +192,7 @@ export const bindClientEvents = (client) => {
         );
 
         await upsertPayment({
+          groupId,
           type: type.toLowerCase(), // Store lowercase for consistency
           label: type.toUpperCase(),
           image: fileName,
@@ -216,12 +217,12 @@ export const bindClientEvents = (client) => {
         );
       }
 
-      const payment = await getPaymentByType(type.toLowerCase());
+      const payment = await getPaymentByType(groupId, type.toLowerCase());
       if (!payment) {
         return message.reply(`❌ Payment *${type}* tidak ditemukan`);
       }
 
-      await deletePayment(type.toLowerCase());
+      await deletePayment(groupId, type.toLowerCase());
 
       return message.reply(
         `🗑️ Metode pembayaran *${type.toUpperCase()}* berhasil dihapus`
@@ -261,7 +262,7 @@ export const bindClientEvents = (client) => {
        const status = text.split(" ")[1];
        const dbKey = toggleMap[cmdKey];
        const val = status === "on";
-       await updateSetting({ ...setting, [dbKey]: val });
+       await updateSetting(groupId, { ...setting, [dbKey]: val });
        return message.reply(`✅ ${cmdKey} berhasil diatur ke *${status.toUpperCase()}*`);
     }
 
@@ -269,7 +270,7 @@ export const bindClientEvents = (client) => {
     // LIST PRODUK
     // =====================
     if (text === "list") {
-      const lists = await getAllLists();
+      const lists = await getAllLists(groupId);
       if (lists.length === 0) {
         return message.reply("📦 Belum ada produk");
       }
@@ -304,7 +305,7 @@ ${productLines}
         return message.reply("❌ Gunakan .order <produk>");
       }
 
-      const item = await getListByKeyword(keyword);
+      const item = await getListByKeyword(groupId, keyword);
       if (!item) {
         return message.reply("❌ Produk tidak ditemukan");
       }
@@ -332,7 +333,7 @@ ${productLines}
     // PAYMENT INFO
     // =====================
     if (text === "pay") {
-      const payments = await getAllPayments();
+      const payments = await getAllPayments(groupId);
 
       // 🔥 JIKA BELUM ADA PAYMENT
       if (payments.length === 0) {
@@ -443,7 +444,7 @@ ${productLines}
     // =====================
     // AUTO REPLY LIST DETAIL
     // =====================
-    const item = await getListByKeyword(text);
+    const item = await getListByKeyword(groupId, text);
     if (item) {
       return message.reply(item.content);
     }
@@ -454,10 +455,10 @@ ${productLines}
     if (notification.type !== "add" && notification.type !== "invite") return;
 
     try {
-      const setting = await getSetting();
-      if(!setting) return; 
-
       const chat = await notification.getChat();
+      const groupId = chat.id._serialized;
+      const setting = await getSetting(groupId);
+      if(!setting) return; 
       
       // Iterate over all recipients (support bulk add)
       for (const recipientId of notification.recipientIds) {
