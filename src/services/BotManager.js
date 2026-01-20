@@ -33,8 +33,18 @@ class BotManager {
         const client = new Client({
             authStrategy: new LocalAuth({ clientId: sessionId }),
             puppeteer: {
-                headless: true,
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
+                headless: 'shell', // Use 'shell' for better server compatibility or true
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-extensions',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu',
+                    '--no-first-run',
+                    '--no-zygote'
+                ],
+                // Explicitly set a standard User-Agent
+                userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36'
             }
         });
 
@@ -95,8 +105,24 @@ class BotManager {
             
             console.log(`Attempting to join group with code: ${code}`);
             
-            // Wait 2 seconds to ensure client is fully synced
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Wait for Store to be ready with retries
+            let retries = 5;
+            let ready = false;
+            while (retries > 0 && !ready) {
+                ready = await client.pupPage.evaluate(() => {
+                    return typeof window.Store !== 'undefined' && typeof window.Store.GroupInvite !== 'undefined';
+                }).catch(() => false);
+
+                if (!ready) {
+                    console.log(`Store not ready yet, retrying... (${retries} left)`);
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    retries--;
+                }
+            }
+
+            if (!ready) {
+                throw new Error("WhatsApp Store initialization timed out. Please try again in a few moments.");
+            }
 
             const groupId = await client.acceptInvite(code);
             console.log(`Joined group: ${groupId}`);
