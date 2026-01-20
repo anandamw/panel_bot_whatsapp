@@ -49,7 +49,7 @@ class BotManager {
         });
 
         // Bind Custom Logic (Anti, Menu, Payment, etc)
-        bindClientEvents(client);
+        bindClientEvents(client, sessionId);
 
         client.on('qr', (qr) => {
             console.log(`QR Code received for ${sessionId}`);

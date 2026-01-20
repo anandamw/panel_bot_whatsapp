@@ -29,7 +29,9 @@ import {
   updateList,
 } from "../../repositories/listRepository.js";
 
-export const bindClientEvents = (client) => {
+import { db } from "../../database/mysql.js";
+
+export const bindClientEvents = (client, sessionId) => {
   client.on("message", async (message) => {
     // Avoid handling status broadcasts
     if(message.from === 'status@broadcast') return;
@@ -39,13 +41,50 @@ export const bindClientEvents = (client) => {
     // Original: if (!chat.isGroup) return;
     if (!chat.isGroup) return;
 
+    const groupId = chat.id._serialized;
+
+    // =====================
+    // AUTHORIZATION CHECK
+    // =====================
+    const [authGroups] = await db.query(
+      'SELECT * FROM bot_groups WHERE session_id = ? AND group_id = ?',
+      [sessionId, groupId]
+    );
+
+    if (authGroups.length === 0) {
+      const sender = await message.getContact();
+      const senderNumber = normalizePhone(sender.number);
+
+      console.log(`Unauthorized usage attempt in group "${chat.name}" (${groupId}) by ${senderNumber}`);
+
+      // Log the unauthorized activity
+      await db.query(
+        'INSERT INTO unauthorized_logs (session_id, group_id, group_name, sender_number, action) VALUES (?, ?, ?, ?, ?)',
+        [sessionId, groupId, chat.name || 'Unknown Group', senderNumber, 'message_received']
+      );
+
+      // Notify and leave
+      try {
+        await message.reply(
+          "⚠️ *AKSES DITOLAK* ⚠️\n\n" +
+          "Mohon maaf, grup ini tidak terdaftar dalam layanan resmi kami.\n" +
+          "Silakan hubungi admin untuk mendaftarkan grup ini.\n\n" +
+          "Bot akan segera keluar dari grup. Terimakasih."
+        );
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Give time for message to send
+        await chat.leave();
+      } catch (e) {
+        console.error("Error leaving unauthorized group", e);
+      }
+      return;
+    }
+
     const textRaw = message.body.trim();
     const text = textRaw.toLowerCase();
 
     const sender = await message.getContact();
     const senderNumber = normalizePhone(sender.number);
 
-    const groupId = chat.id._serialized;
     let setting;
     try {
         setting = await getSetting(groupId);
