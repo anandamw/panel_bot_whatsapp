@@ -64,6 +64,39 @@ class BotManager {
                 const phoneNumber = client.info.wid.user;
                 console.log(`Bot Phone Number: ${phoneNumber}`);
                 await db.query('UPDATE bots SET status = ?, phone_number = ? WHERE session_id = ?', ['connected', phoneNumber, sessionId]);
+
+                // =====================
+                // GREETING MESSAGE - Kirim sapaan ke semua grup yang terdaftar
+                // =====================
+                const [groups] = await db.query('SELECT group_id, group_name FROM bot_groups WHERE session_id = ?', [sessionId]);
+                
+                if (groups.length > 0) {
+                    console.log(`Sending greeting to ${groups.length} groups...`);
+                    
+                    const greetingMessage = `
+✨ *Haiii~ Bot sudah online!* 💕
+
+Halo semuanya! 👋
+Bot sudah siap melayani~
+
+Ketik *.menu* untuk melihat daftar perintah.
+Selamat berbelanja! 🛒💖
+                    `.trim();
+
+                    for (const group of groups) {
+                        try {
+                            const chat = await client.getChatById(group.group_id);
+                            if (chat) {
+                                await chat.sendMessage(greetingMessage);
+                                console.log(`✓ Greeting sent to: ${group.group_name}`);
+                            }
+                        } catch (greetErr) {
+                            console.error(`Failed to send greeting to ${group.group_name}:`, greetErr.message);
+                        }
+                        // Small delay to avoid spam detection
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
             } catch (err) {
                 console.error('Failed to update status/phone to connected', err);
             }
