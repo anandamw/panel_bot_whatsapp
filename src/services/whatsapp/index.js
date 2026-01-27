@@ -376,6 +376,8 @@ ${productLines}
       }
 
       const admins = await getGroupAdmins(chat);
+      // Convert Contact objects to IDs for mentions (fix deprecation warning)
+      const adminIds = admins.map(a => a.id ? a.id._serialized : a);
 
       const orderMsg = `
 🛒 *ORDER BARU*
@@ -390,7 +392,7 @@ ${productLines}
 - Metode Pembayaran :
       `.trim();
 
-      await chat.sendMessage(orderMsg, { mentions: admins });
+      await chat.sendMessage(orderMsg, { mentions: adminIds });
       return;
     }
 
@@ -555,21 +557,32 @@ ${productLines}
         // SECURITY CHECKS
         // =====================
         if (setting.anti_bot && contact.isBusiness) {
-          // Kick bot
-          await chat.sendMessage(`⚠️ *ANTI BOT DETECTED*\nMaaf @${contact.number}, bot dilarang masuk sini.`, { mentions: [contact] });
-          await chat.removeParticipants([recipientId]);
+          // Kick bot - use contact ID for mention (fix deprecation)
+          const contactId = contact.id ? contact.id._serialized : recipientId;
+          await chat.sendMessage(`⚠️ *ANTI BOT DETECTED*\nMaaf @${contact.number}, bot dilarang masuk sini.`, { mentions: [contactId] });
+          try {
+            await chat.removeParticipants([recipientId]);
+          } catch (kickErr) {
+            console.log(`Failed to kick bot: ${kickErr.message}`);
+          }
           continue; // Skip welcome
         }
 
         const countryCode = contact.number.substring(0, 2);
         if (setting.anti_asing && countryCode !== "62" && countryCode !== "60") {
-           // Kick foreign number (Allow Indo & Malay only)
-           await chat.sendMessage(`⚠️ *ANTI ASING DETECTED*\nMaaf @${contact.number}, nomor luar negeri dilarang masuk.`, { mentions: [contact] });
-           await chat.removeParticipants([recipientId]);
+           // Kick foreign number (Allow Indo & Malay only) - use contact ID for mention
+           const contactId = contact.id ? contact.id._serialized : recipientId;
+           await chat.sendMessage(`⚠️ *ANTI ASING DETECTED*\nMaaf @${contact.number}, nomor luar negeri dilarang masuk.`, { mentions: [contactId] });
+           try {
+             await chat.removeParticipants([recipientId]);
+           } catch (kickErr) {
+             console.log(`Failed to kick foreign number: ${kickErr.message}`);
+           }
            continue; // Skip welcome
         }
 
-        // Welcome Message
+        // Welcome Message - use contact ID for mention (fix deprecation)
+        const contactId = contact.id ? contact.id._serialized : recipientId;
         const welcomeText = `
 Welcome to *${chat.name}* 👋
 Halo @${contact.number}!
@@ -579,7 +592,7 @@ Jangan lupa baca deskripsi grup ya ~
         `.trim();
 
         // Send message with mention
-        await chat.sendMessage(welcomeText, { mentions: [contact] });
+        await chat.sendMessage(welcomeText, { mentions: [contactId] });
       }
 
     } catch (error) {
