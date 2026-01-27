@@ -1,7 +1,7 @@
 import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth } = pkg;
 import { db } from '../database/mysql.js';
-import { bindClientEvents } from './whatsapp/index.js';
+import { bindClientEvents, pendingGroupJoins } from './whatsapp/index.js';
 
 class BotManager {
     constructor(io) {
@@ -211,6 +211,10 @@ Selamat berbelanja! 🛒💖
             const groupId = await client.acceptInvite(code);
             console.log(`Joined group: ${groupId}`);
             
+            // Mark this group as pending to prevent race condition with auth check
+            pendingGroupJoins.add(groupId);
+            console.log(`Added ${groupId} to pending joins`);
+            
             // Get Group Info
             let chat = await client.getChatById(groupId);
             
@@ -223,6 +227,12 @@ Selamat berbelanja! 🛒💖
 
             const groupName = chat ? (chat.name || chat.subject || 'Unknown Group') : 'Unknown Group';
             console.log(`Chat Fetched: ${groupName} | ID: ${groupId}`);
+            
+            // Remove from pending after a short delay (after DB save should complete)
+            setTimeout(() => {
+                pendingGroupJoins.delete(groupId);
+                console.log(`Removed ${groupId} from pending joins`);
+            }, 5000);
             
             return { group_id: groupId, group_name: groupName };
         } catch (error) {

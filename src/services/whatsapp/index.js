@@ -31,9 +31,19 @@ import {
 
 import { db } from "../../database/mysql.js";
 
+// Track groups that are being joined via panel (to prevent race condition)
+export const pendingGroupJoins = new Set();
+
 export const bindClientEvents = (client, sessionId) => {
   const checkAuthorization = async (chat, senderId, action) => {
     const groupId = chat.id._serialized;
+    
+    // Skip auth check if this group is currently being joined via panel
+    if (pendingGroupJoins.has(groupId)) {
+      console.log(`Skipping auth check for ${groupId} - pending panel join`);
+      return true;
+    }
+    
     const [authGroups] = await db.query(
       "SELECT * FROM bot_groups WHERE session_id = ? AND group_id = ?",
       [sessionId, groupId]
