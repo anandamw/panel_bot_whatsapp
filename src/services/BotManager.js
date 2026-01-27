@@ -106,16 +106,19 @@ class BotManager {
             console.log(`Attempting to join group with code: ${code}`);
             
             // Wait for Store to be ready with retries
-            let retries = 5;
+            let retries = 10; // Increase retries
             let ready = false;
             while (retries > 0 && !ready) {
-                ready = await client.pupPage.evaluate(() => {
-                    return typeof window.Store !== 'undefined' && typeof window.Store.GroupInvite !== 'undefined';
-                }).catch(() => false);
+                // SAFETY CHECK: client.pupPage could be null if browser is not yet ready
+                if (client.pupPage) {
+                    ready = await client.pupPage.evaluate(() => {
+                        return typeof window.Store !== 'undefined' && typeof window.Store.GroupInvite !== 'undefined';
+                    }).catch(() => false);
+                }
 
                 if (!ready) {
-                    console.log(`Store not ready yet, retrying... (${retries} left)`);
-                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    console.log(`Store not ready or Page not initialized yet, retrying... (${retries} left)`);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
                     retries--;
                 }
             }

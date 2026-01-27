@@ -32,49 +32,68 @@ import {
 import { db } from "../../database/mysql.js";
 
 export const bindClientEvents = (client, sessionId) => {
+  const checkAuthorization = async (chat, senderId, action) => {
+    const groupId = chat.id._serialized;
+    const [authGroups] = await db.query(
+      "SELECT * FROM bot_groups WHERE session_id = ? AND group_id = ?",
+      [sessionId, groupId]
+    );
+
+    if (authGroups.length > 0) return true;
+
+    // Unauthorized - Get sender info for logging
+    let senderNumber = "Unknown";
+    try {
+      if (senderId) {
+        const contact = await client.getContactById(senderId);
+        senderNumber = normalizePhone(contact.number);
+      }
+    } catch (e) {
+      console.error("Error fetching contact for auth log", e);
+    }
+
+    console.log(
+      `Unauthorized ${action} in group "${chat.name}" (${groupId}) by ${senderNumber}`
+    );
+
+    // Log the unauthorized activity
+    await db.query(
+      "INSERT INTO unauthorized_logs (session_id, group_id, group_name, sender_number, action) VALUES (?, ?, ?, ?, ?)",
+      [
+        sessionId,
+        groupId,
+        chat.name || "Unknown Group",
+        senderNumber,
+        action,
+      ]
+    );
+
+    return false;
+  };
+
   client.on("message", async (message) => {
     // Avoid handling status broadcasts
-    if(message.from === 'status@broadcast') return;
+    if (message.from === "status@broadcast") return;
 
     const chat = await message.getChat();
-    // Only work in groups for now as per original logic? Or check original? 
-    // Original: if (!chat.isGroup) return;
     if (!chat.isGroup) return;
-
-    const groupId = chat.id._serialized;
 
     // =====================
     // AUTHORIZATION CHECK
     // =====================
-    const [authGroups] = await db.query(
-      'SELECT * FROM bot_groups WHERE session_id = ? AND group_id = ?',
-      [sessionId, groupId]
-    );
-
-    if (authGroups.length === 0) {
-      const sender = await message.getContact();
-      const senderNumber = normalizePhone(sender.number);
-
-      console.log(`Unauthorized usage attempt in group "${chat.name}" (${groupId}) by ${senderNumber}`);
-
-      // Log the unauthorized activity
-      await db.query(
-        'INSERT INTO unauthorized_logs (session_id, group_id, group_name, sender_number, action) VALUES (?, ?, ?, ?, ?)',
-        [sessionId, groupId, chat.name || 'Unknown Group', senderNumber, 'message_received']
-      );
-
-      // Notify and leave
+    const isAuth = await checkAuthorization(chat, message.author || message.from, "message_received");
+    if (!isAuth) {
       try {
         await message.reply(
           "⚠️ *AKSES DITOLAK* ⚠️\n\n" +
-          "Mohon maaf, grup ini tidak terdaftar dalam layanan resmi kami.\n" +
-          "Silakan hubungi admin untuk mendaftarkan grup ini.\n\n" +
-          "Bot akan segera keluar dari grup. Terimakasih."
+            "Mohon maaf, grup ini tidak terdaftar dalam layanan resmi kami.\n" +
+            "Silakan hubungi admin untuk mendaftarkan grup ini.\n\n" +
+            "Bot akan segera keluar dari grup. Terimakasih."
         );
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Give time for message to send
+        await new Promise((resolve) => setTimeout(resolve, 2000));
         await chat.leave();
       } catch (e) {
-        console.error("Error leaving unauthorized group", e);
+        console.error("Error leaving unauthorized group on message", e);
       }
       return;
     }
@@ -496,6 +515,18 @@ ${productLines}
     try {
       const chat = await notification.getChat();
       const groupId = chat.id._serialized;
+
+      // =====================
+      // AUTHORIZATION CHECK
+      // =====================
+      // action = "group_join"
+      const isAuth = await checkAuthorization(chat, notification.author, "group_join");
+      if (!isAuth) {
+        console.log(`Bot was added to unauthorized group "${chat.name}", leaving...`);
+        await chat.leave();
+        return;
+      }
+
       const setting = await getSetting(groupId);
       if(!setting) return; 
       
@@ -535,7 +566,7 @@ Jangan lupa baca deskripsi grup ya ~
       }
 
     } catch (error) {
-      console.error("Error sending welcome message:", error);
+      console.error("Error handling group_join:", error);
     }
   });
 };
