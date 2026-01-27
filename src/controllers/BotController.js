@@ -98,3 +98,21 @@ export const destroy = async (req, res) => {
         res.status(500).json({ success: false, message: 'Failed to delete bot' });
     }
 };
+
+/**
+ * Refresh Session - Scan ulang QR tanpa menghapus data grup
+ */
+export const refreshSession = async (req, res) => {
+    const { sessionId } = req.params;
+    
+    try {
+        const botManager = req.app.get('botManager');
+        await botManager.refreshSession(sessionId);
+        
+        // Redirect to scan page for new QR
+        res.render('scan', { title: 'Re-Scan QR', sessionId });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: error.message || 'Failed to refresh session' });
+    }
+};

@@ -245,6 +245,55 @@ Selamat berbelanja! 🛒💖
             throw error;
         }
     }
+
+    /**
+     * Refresh/Re-scan session - Logout dan scan QR baru tanpa menghapus data grup
+     * @param {string} sessionId 
+     * @returns {Promise<boolean>}
+     */
+    async refreshSession(sessionId) {
+        try {
+            console.log(`Refreshing session: ${sessionId}`);
+            
+            // 1. Destroy existing client if exists
+            if (this.clients.has(sessionId)) {
+                const client = this.clients.get(sessionId);
+                try {
+                    await client.logout(); // Logout dari WhatsApp
+                } catch (logoutErr) {
+                    console.log(`Logout warning (might already be logged out): ${logoutErr.message}`);
+                }
+                try {
+                    await client.destroy(); // Destroy browser
+                } catch (destroyErr) {
+                    console.log(`Destroy warning: ${destroyErr.message}`);
+                }
+                this.clients.delete(sessionId);
+            }
+
+            // 2. Delete session folder to force new QR
+            const sessionPath = `./.wwebjs_auth/session-${sessionId}`;
+            const fs = await import('fs');
+            const path = await import('path');
+            
+            if (fs.existsSync(sessionPath)) {
+                console.log(`Deleting session folder: ${sessionPath}`);
+                fs.rmSync(sessionPath, { recursive: true, force: true });
+            }
+
+            // 3. Update status in database (keep bot record and groups!)
+            await db.query('UPDATE bots SET status = ?, phone_number = NULL WHERE session_id = ?', ['disconnected', sessionId]);
+
+            // 4. Re-create client (will show new QR code)
+            console.log(`Re-creating client for ${sessionId}...`);
+            this.createBot(sessionId);
+
+            return true;
+        } catch (error) {
+            console.error(`Error refreshing session ${sessionId}:`, error);
+            throw error;
+        }
+    }
 }
 
 export default BotManager;

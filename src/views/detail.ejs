@@ -4,10 +4,16 @@
         <h2 class="text-2xl font-bold text-gray-800">Bot Details</h2>
         <p class="text-gray-500 text-sm">Session: <%= bot.session_id %> | Phone: <%= bot.phone_number || 'Unknown' %></p>
     </div>
-    <a href="/" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-        Back to Dashboard
-    </a>
+    <div class="flex items-center gap-2">
+        <a href="/bots/<%= bot.session_id %>/refresh" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2" onclick="return confirm('Ini akan logout session dan memunculkan QR baru. Data grup akan tetap tersimpan. Lanjutkan?')">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            Re-Scan QR
+        </a>
+        <a href="/" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Back to Dashboard
+        </a>
+    </div>
 </div>
 
 <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">
