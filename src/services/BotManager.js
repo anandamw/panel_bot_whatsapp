@@ -34,6 +34,8 @@ class BotManager {
             authStrategy: new LocalAuth({ clientId: sessionId }),
             puppeteer: {
                 headless: 'shell', // Use 'shell' for better server compatibility or true
+                protocolTimeout: 120000, // Increase protocol timeout to 2 minutes
+                timeout: 60000, // Navigation timeout
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
@@ -129,6 +131,11 @@ Selamat berbelanja! 🛒💖
              throw new Error("Bot not found or not connected");
         }
         
+        // Check if client is fully ready (has info)
+        if (!client.info || !client.info.wid) {
+            throw new Error("Bot belum sepenuhnya siap. Tunggu beberapa saat sampai status 'Connected' muncul, lalu coba lagi.");
+        }
+        
         try {
             // Regex to extract code from links like https://chat.whatsapp.com/CODE or just CODE
             const match = groupLink.match(/(?:chat\.whatsapp\.com\/)?([0-9A-Za-z]{20,24})/);
@@ -139,25 +146,31 @@ Selamat berbelanja! 🛒💖
             console.log(`Attempting to join group with code: ${code}`);
             
             // Wait for Store to be ready with retries
-            let retries = 10; // Increase retries
+            let retries = 15; // Increase retries
             let ready = false;
             while (retries > 0 && !ready) {
                 // SAFETY CHECK: client.pupPage could be null if browser is not yet ready
                 if (client.pupPage) {
-                    ready = await client.pupPage.evaluate(() => {
-                        return typeof window.Store !== 'undefined' && typeof window.Store.GroupInvite !== 'undefined';
-                    }).catch(() => false);
+                    try {
+                        ready = await client.pupPage.evaluate(() => {
+                            return typeof window.Store !== 'undefined' && 
+                                   typeof window.Store.GroupInvite !== 'undefined';
+                        });
+                    } catch (evalErr) {
+                        console.log(`Evaluate failed: ${evalErr.message}`);
+                        ready = false;
+                    }
                 }
 
                 if (!ready) {
                     console.log(`Store not ready or Page not initialized yet, retrying... (${retries} left)`);
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    await new Promise(resolve => setTimeout(resolve, 3000)); // Increase delay to 3 seconds
                     retries--;
                 }
             }
 
             if (!ready) {
-                throw new Error("WhatsApp Store initialization timed out. Please try again in a few moments.");
+                throw new Error("WhatsApp Store initialization timed out. Pastikan bot sudah dalam status 'Connected' sebelum join group.");
             }
 
             const groupId = await client.acceptInvite(code);
