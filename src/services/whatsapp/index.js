@@ -500,7 +500,9 @@ ${productLines}
        if (shouldDelete) {
           try {
              await message.delete(true);
-             await chat.sendMessage(`⚠️ *ANTI ${violation.toUpperCase()}*\n@${senderNumber} pesan dihapus.`, { mentions: [sender] });
+             // Use sender ID instead of Contact object for mentions (fix deprecation)
+             const senderId = sender.id ? sender.id._serialized : message.author || message.from;
+             await chat.sendMessage(`⚠️ *ANTI ${violation.toUpperCase()}*\n@${senderNumber} pesan dihapus.`, { mentions: [senderId] });
           } catch (e) {
              console.log("Failed to delete message", e);
           }
