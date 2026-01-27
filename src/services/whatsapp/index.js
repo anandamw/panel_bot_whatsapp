@@ -90,10 +90,15 @@ export const bindClientEvents = (client, sessionId) => {
             "Silakan hubungi admin untuk mendaftarkan grup ini.\n\n" +
             "Bot akan segera keluar dari grup. Terimakasih."
         );
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        await chat.leave();
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        // Use safer leave approach
+        if (chat && typeof chat.leave === 'function') {
+          await chat.leave().catch(leaveErr => {
+            console.error("Safe leave failed:", leaveErr.message);
+          });
+        }
       } catch (e) {
-        console.error("Error leaving unauthorized group on message", e);
+        console.error("Error leaving unauthorized group on message", e.message);
       }
       return;
     }
@@ -523,7 +528,17 @@ ${productLines}
       const isAuth = await checkAuthorization(chat, notification.author, "group_join");
       if (!isAuth) {
         console.log(`Bot was added to unauthorized group "${chat.name}", leaving...`);
-        await chat.leave();
+        try {
+          // Delay before leaving to ensure stability
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          if (chat && typeof chat.leave === 'function') {
+            await chat.leave().catch(leaveErr => {
+              console.error("Safe leave failed on group_join:", leaveErr.message);
+            });
+          }
+        } catch (leaveError) {
+          console.error("Error during unauthorized group leave:", leaveError.message);
+        }
         return;
       }
 

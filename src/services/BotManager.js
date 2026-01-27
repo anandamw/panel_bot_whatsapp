@@ -109,9 +109,37 @@ Selamat berbelanja! 🛒💖
              this.io.emit('authenticated', { sessionId });
         });
 
-        client.on('auth_failure', (msg) => {
+        client.on('auth_failure', async (msg) => {
             console.error(`AUTHENTICATION FAILURE for ${sessionId}`, msg);
-             this.io.emit('log', { sessionId, message: 'Auth failure' });
+            this.io.emit('log', { sessionId, message: 'Auth failure' });
+            // Update status di database
+            try {
+                await db.query('UPDATE bots SET status = ? WHERE session_id = ?', ['disconnected', sessionId]);
+            } catch (e) {
+                console.error('Failed to update status on auth_failure:', e.message);
+            }
+        });
+
+        client.on('disconnected', async (reason) => {
+            console.log(`Client ${sessionId} disconnected: ${reason}`);
+            this.io.emit('log', { sessionId, message: `Disconnected: ${reason}` });
+            
+            try {
+                await db.query('UPDATE bots SET status = ? WHERE session_id = ?', ['disconnected', sessionId]);
+                
+                // Auto-reconnect jika masih ada di map
+                if (this.clients.has(sessionId)) {
+                    console.log(`Attempting to reconnect ${sessionId} in 5 seconds...`);
+                    setTimeout(() => {
+                        if (this.clients.has(sessionId)) {
+                            this.clients.delete(sessionId);
+                            this.createBot(sessionId);
+                        }
+                    }, 5000);
+                }
+            } catch (e) {
+                console.error('Error handling disconnect:', e.message);
+            }
         });
 
         client.initialize().catch(err => {
@@ -131,9 +159,16 @@ Selamat berbelanja! 🛒💖
              throw new Error("Bot not found or not connected");
         }
         
-        // Check if client is fully ready (has info)
+        // Wait for client to be fully ready (has info) with retries
+        let clientReadyRetries = 20; // Max 20 retries = ~60 seconds
+        while ((!client.info || !client.info.wid) && clientReadyRetries > 0) {
+            console.log(`Waiting for client to be ready... (${clientReadyRetries} attempts left)`);
+            await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds
+            clientReadyRetries--;
+        }
+        
         if (!client.info || !client.info.wid) {
-            throw new Error("Bot belum sepenuhnya siap. Tunggu beberapa saat sampai status 'Connected' muncul, lalu coba lagi.");
+            throw new Error("Bot belum sepenuhnya siap setelah menunggu. Pastikan bot sudah scan QR dan status 'Connected'.");
         }
         
         try {
