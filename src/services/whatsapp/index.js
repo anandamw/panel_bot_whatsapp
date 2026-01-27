@@ -77,6 +77,8 @@ export const bindClientEvents = (client, sessionId) => {
 
     const chat = await message.getChat();
     if (!chat.isGroup) return;
+    
+    const groupId = chat.id._serialized; // Define groupId here for use throughout the handler
 
     // =====================
     // AUTHORIZATION CHECK
