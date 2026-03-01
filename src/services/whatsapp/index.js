@@ -37,13 +37,13 @@ export const pendingGroupJoins = new Set();
 export const bindClientEvents = (client, sessionId) => {
   const checkAuthorization = async (chat, senderId, action) => {
     const groupId = chat.id._serialized;
-    
+
     // Skip auth check if this group is currently being joined via panel
     if (pendingGroupJoins.has(groupId)) {
       console.log(`Skipping auth check for ${groupId} - pending panel join`);
       return true;
     }
-    
+
     const [authGroups] = await db.query(
       "SELECT * FROM bot_groups WHERE session_id = ? AND group_id = ?",
       [sessionId, groupId]
@@ -87,7 +87,7 @@ export const bindClientEvents = (client, sessionId) => {
 
     const chat = await message.getChat();
     if (!chat.isGroup) return;
-    
+
     const groupId = chat.id._serialized; // Define groupId here for use throughout the handler
 
     // =====================
@@ -98,9 +98,9 @@ export const bindClientEvents = (client, sessionId) => {
       try {
         await message.reply(
           "⚠️ *AKSES DITOLAK* ⚠️\n\n" +
-            "Mohon maaf, grup ini tidak terdaftar dalam layanan resmi kami.\n" +
-            "Silakan hubungi admin untuk mendaftarkan grup ini.\n\n" +
-            "Bot akan segera keluar dari grup. Terimakasih."
+          "Mohon maaf, grup ini tidak terdaftar dalam layanan resmi kami.\n" +
+          "Silakan hubungi admin untuk mendaftarkan grup ini.\n\n" +
+          "Bot akan segera keluar dari grup. Terimakasih."
         );
         await new Promise((resolve) => setTimeout(resolve, 3000));
         // Use safer leave approach
@@ -123,11 +123,11 @@ export const bindClientEvents = (client, sessionId) => {
 
     let setting;
     try {
-        setting = await getSetting(groupId);
-        if(!setting) setting = {}; // Fallback
-    } catch(e) { 
-        console.error("Error fetching settings", e);
-        setting = {};
+      setting = await getSetting(groupId);
+      if (!setting) setting = {}; // Fallback
+    } catch (e) {
+      console.error("Error fetching settings", e);
+      setting = {};
     }
 
     const isAdmin = await isGroupAdmin(chat, message);
@@ -140,28 +140,28 @@ export const bindClientEvents = (client, sessionId) => {
         await updateSetting(groupId, { ...setting, bot_open: true });
         // Handling error if bot is not admin?
         try {
-            await chat.setMessagesAdminsOnly(false);
-            return message.reply(
+          await chat.setMessagesAdminsOnly(false);
+          return message.reply(
             "🎉 *Grup dibuka!* 🎉\n" +
             "Halo bestie~ 💕\n" +
             "Yuk order aplikasi premium favoritmu 📱✨"
-            );
-        } catch(e) {
-            return message.reply("❌ Gagal membuka grup. Pastikan Bot adalah Admin.");
+          );
+        } catch (e) {
+          return message.reply("❌ Gagal membuka grup. Pastikan Bot adalah Admin.");
         }
       }
 
       if (text === "close") {
         await updateSetting(groupId, { ...setting, bot_open: false });
         try {
-            await chat.setMessagesAdminsOnly(true);
-            return message.reply(
+          await chat.setMessagesAdminsOnly(true);
+          return message.reply(
             "😴 *Grup ditutup dulu yaa~*\n" +
             "Bot & admin lagi rehat sebentar.\n" +
             "Sampai ketemu pas buka lagi 🤍"
-            );
-        } catch(e) {
-            return message.reply("❌ Gagal menutup grup. Pastikan Bot adalah Admin.");
+          );
+        } catch (e) {
+          return message.reply("❌ Gagal menutup grup. Pastikan Bot adalah Admin.");
         }
       }
 
@@ -196,7 +196,7 @@ export const bindClientEvents = (client, sessionId) => {
         const [keyPart, ...contentPart] = data.split("@");
 
         if (!keyPart || contentPart.length === 0) {
-           return message.reply("❌ Format salah\n.updatelist keyword@BARU");
+          return message.reply("❌ Format salah\n.updatelist keyword@BARU");
         }
 
         const keyword = keyPart.trim().toLowerCase();
@@ -205,26 +205,26 @@ export const bindClientEvents = (client, sessionId) => {
         // Check exist
         const item = await getListByKeyword(groupId, keyword);
         if (!item) {
-           return message.reply(`❌ List *${keyword}* tidak ditemukan`);
+          return message.reply(`❌ List *${keyword}* tidak ditemukan`);
         }
 
         await updateList({ groupId, keyword, content });
         return message.reply(`✅ List *${keyword}* berhasil diupdate`);
       }
- 
+
       // =====================
       // HIDETAG (h text)
       // =====================
       if (textRaw.startsWith("h ")) {
-          const content = textRaw.slice(2);
-          const participants = chat.participants.map(p => p.id._serialized);
-          
-          await chat.sendMessage(content, { 
-              mentions: participants 
-          });
-          // Delete command message to keep it clean? Optional.
-          // await message.delete(true); 
-          return;
+        const content = textRaw.slice(2);
+        const participants = chat.participants.map(p => p.id._serialized);
+
+        await chat.sendMessage(content, {
+          mentions: participants
+        });
+        // Delete command message to keep it clean? Optional.
+        // await message.delete(true); 
+        return;
       }
 
       // =====================
@@ -257,8 +257,8 @@ export const bindClientEvents = (client, sessionId) => {
         const fileName = `${type}.${ext}`;
         // Ensure dir exists
         const payDir = path.join(process.cwd(), "src/assets/payment");
-        if(!fs.existsSync(payDir)) fs.mkdirSync(payDir, { recursive: true });
-        
+        if (!fs.existsSync(payDir)) fs.mkdirSync(payDir, { recursive: true });
+
         const filePath = path.join(payDir, fileName);
 
         await fs.promises.writeFile(
@@ -334,11 +334,11 @@ export const bindClientEvents = (client, sessionId) => {
 
     const cmdKey = Object.keys(toggleMap).find(k => text.startsWith(k + " "));
     if (isAdmin && cmdKey) {
-       const status = text.split(" ")[1];
-       const dbKey = toggleMap[cmdKey];
-       const val = status === "on";
-       await updateSetting(groupId, { ...setting, [dbKey]: val });
-       return message.reply(`✅ ${cmdKey} berhasil diatur ke *${status.toUpperCase()}*`);
+      const status = text.split(" ")[1];
+      const dbKey = toggleMap[cmdKey];
+      const val = status === "on";
+      await updateSetting(groupId, { ...setting, [dbKey]: val });
+      return message.reply(`✅ ${cmdKey} berhasil diatur ke *${status.toUpperCase()}*`);
     }
 
     // =====================
@@ -448,76 +448,76 @@ ${productLines}
     // ANTI SYSTEM (AUTO DELETE)
     // =====================
     if (!isAdmin) {
-       const msg = textRaw.toLowerCase();
- 
-       let shouldDelete = false;
-       let violation = "";
+      const msg = textRaw.toLowerCase();
 
-       // 0. Anti Virtex (Payload/Long Text)
-       if (setting.anti_pl && msg.length > 4000) {
-           shouldDelete = true;
-           violation = "Virtex / Teks Panjang";
-       }
+      let shouldDelete = false;
+      let violation = "";
 
-       // 1. Check Toxic
-       if (setting.anti_toxic_1 && toxicList1.some(w => msg.includes(w))) {
-           shouldDelete = true; 
-           violation = "Toxic 1";
-       }
-       else if (setting.anti_toxic_2 && toxicList2.some(w => msg.includes(w))) {
-           shouldDelete = true;
-           violation = "Toxic 2";
-       }
+      // 0. Anti Virtex (Payload/Long Text)
+      if (setting.anti_pl && msg.length > 4000) {
+        shouldDelete = true;
+        violation = "Virtex / Teks Panjang";
+      }
 
-       // 2. Check Links
-       // Antich (Channel)
-       if (!shouldDelete && setting.anti_ch && linkPatterns.channel.test(msg)) {
-          shouldDelete = true;
-          violation = "Channel Link";
-       }
+      // 1. Check Toxic
+      if (setting.anti_toxic_1 && toxicList1.some(w => msg.includes(w))) {
+        shouldDelete = true;
+        violation = "Toxic 1";
+      }
+      else if (setting.anti_toxic_2 && toxicList2.some(w => msg.includes(w))) {
+        shouldDelete = true;
+        violation = "Toxic 2";
+      }
 
-       // Antiwame (Wa.me)
-       if (!shouldDelete && setting.anti_wame && linkPatterns.wame.test(msg)) {
-          shouldDelete = true;
-          violation = "Wa.me Link";
-       }
+      // 2. Check Links
+      // Antich (Channel)
+      if (!shouldDelete && setting.anti_ch && linkPatterns.channel.test(msg)) {
+        shouldDelete = true;
+        violation = "Channel Link";
+      }
 
-       // Antilinkgc (Group)
-       if (!shouldDelete && (setting.anti_link_gc_1 || setting.anti_link_gc_2) && linkPatterns.group.test(msg)) {
-          shouldDelete = true;
-          violation = "Group Link";
-          // Logic for gc2 (Kick) could go here but skipping for safety
-       }
+      // Antiwame (Wa.me)
+      if (!shouldDelete && setting.anti_wame && linkPatterns.wame.test(msg)) {
+        shouldDelete = true;
+        violation = "Wa.me Link";
+      }
 
-        // Antilinktt (Tiktok)
-       if (!shouldDelete && setting.anti_link_tt && linkPatterns.tiktok.test(msg)) {
-          shouldDelete = true;
-          violation = "Tiktok Link";
-       }
+      // Antilinkgc (Group)
+      if (!shouldDelete && (setting.anti_link_gc_1 || setting.anti_link_gc_2) && linkPatterns.group.test(msg)) {
+        shouldDelete = true;
+        violation = "Group Link";
+        // Logic for gc2 (Kick) could go here but skipping for safety
+      }
 
-       // Antilinkyt (Youtube)
-       if (!shouldDelete && setting.anti_link_yt && linkPatterns.youtube.test(msg)) {
-          shouldDelete = true;
-          violation = "Youtube Link";
-       }
+      // Antilinktt (Tiktok)
+      if (!shouldDelete && setting.anti_link_tt && linkPatterns.tiktok.test(msg)) {
+        shouldDelete = true;
+        violation = "Tiktok Link";
+      }
 
-       // Antilink (General HTTP)
-       if (!shouldDelete && setting.anti_link && linkPatterns.http.test(msg)) {
-           shouldDelete = true;
-           violation = "Link Terlarang";
-       }
+      // Antilinkyt (Youtube)
+      if (!shouldDelete && setting.anti_link_yt && linkPatterns.youtube.test(msg)) {
+        shouldDelete = true;
+        violation = "Youtube Link";
+      }
 
-       if (shouldDelete) {
-          try {
-             await message.delete(true);
-             // Use sender ID instead of Contact object for mentions (fix deprecation)
-             const senderId = sender.id ? sender.id._serialized : message.author || message.from;
-             await chat.sendMessage(`⚠️ *ANTI ${violation.toUpperCase()}*\n@${senderNumber} pesan dihapus.`, { mentions: [senderId] });
-          } catch (e) {
-             console.log("Failed to delete message", e);
-          }
-          return;
-       }
+      // Antilink (General HTTP)
+      if (!shouldDelete && setting.anti_link && linkPatterns.http.test(msg)) {
+        shouldDelete = true;
+        violation = "Link Terlarang";
+      }
+
+      if (shouldDelete) {
+        try {
+          await message.delete(true);
+          // Use sender ID instead of Contact object for mentions (fix deprecation)
+          const senderId = sender.id ? sender.id._serialized : message.author || message.from;
+          await chat.sendMessage(`⚠️ *ANTI ${violation.toUpperCase()}*\n@${senderNumber} pesan dihapus.`, { mentions: [senderId] });
+        } catch (e) {
+          console.log("Failed to delete message", e);
+        }
+        return;
+      }
     }
 
     // =====================
@@ -559,12 +559,12 @@ ${productLines}
       }
 
       const setting = await getSetting(groupId);
-      if(!setting) return; 
-      
+      if (!setting) return;
+
       // Iterate over all recipients (support bulk add)
       for (const recipientId of notification.recipientIds) {
         const contact = await client.getContactById(recipientId);
-        
+
         // =====================
         // SECURITY CHECKS
         // =====================
@@ -582,15 +582,15 @@ ${productLines}
 
         const countryCode = contact.number.substring(0, 2);
         if (setting.anti_asing && countryCode !== "62" && countryCode !== "60") {
-           // Kick foreign number (Allow Indo & Malay only) - use contact ID for mention
-           const contactId = contact.id ? contact.id._serialized : recipientId;
-           await chat.sendMessage(`⚠️ *ANTI ASING DETECTED*\nMaaf @${contact.number}, nomor luar negeri dilarang masuk.`, { mentions: [contactId] });
-           try {
-             await chat.removeParticipants([recipientId]);
-           } catch (kickErr) {
-             console.log(`Failed to kick foreign number: ${kickErr.message}`);
-           }
-           continue; // Skip welcome
+          // Kick foreign number (Allow Indo & Malay only) - use contact ID for mention
+          const contactId = contact.id ? contact.id._serialized : recipientId;
+          await chat.sendMessage(`⚠️ *ANTI ASING DETECTED*\nMaaf @${contact.number}, nomor luar negeri dilarang masuk.`, { mentions: [contactId] });
+          try {
+            await chat.removeParticipants([recipientId]);
+          } catch (kickErr) {
+            console.log(`Failed to kick foreign number: ${kickErr.message}`);
+          }
+          continue; // Skip welcome
         }
 
         // Welcome Message - use contact ID for mention (fix deprecation)
