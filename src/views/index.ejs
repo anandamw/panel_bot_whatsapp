@@ -13,36 +13,86 @@
 
 <div class="grid gap-6 mb-8 md:grid-cols-2 xl:grid-cols-4">
     <!-- Stat Card: Active Bots -->
-    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-        <div class="flex items-center">
-            <div class="p-3 rounded-full bg-green-100 text-green-600">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+    <div class="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow relative overflow-hidden group">
+        <div class="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 bg-green-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
+        <div class="flex items-center relative z-10">
+            <div class="p-4 rounded-xl bg-green-50 text-green-600 shadow-inner">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             </div>
-            <div class="ml-4">
-                <p class="mb-2 text-sm font-medium text-gray-600">Active Bots</p>
-                <p class="text-lg font-semibold text-gray-700"><%= bots.filter(b => b.status === 'connected').length %></p>
+            <div class="ml-5">
+                <p class="mb-1 text-sm font-semibold text-gray-500 uppercase tracking-wider">Active Bots</p>
+                <div class="flex items-baseline gap-2">
+                    <p class="text-3xl font-extrabold text-gray-800"><%= bots.filter(b => b.status === 'connected').length %></p>
+                    <span class="text-xs font-medium text-green-500 bg-green-50 px-2 py-0.5 rounded-full">Online</span>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Stat Card: Total Groups -->
-    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-        <div class="flex items-center">
-            <div class="p-3 rounded-full bg-whatsapp-light/10 text-whatsapp">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+    <div class="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow relative overflow-hidden group">
+        <div class="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 bg-whatsapp-light/5 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
+        <div class="flex items-center relative z-10">
+            <div class="p-4 rounded-xl bg-whatsapp-light/10 text-whatsapp shadow-inner">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
             </div>
-            <div class="ml-4">
-                <p class="mb-2 text-sm font-medium text-gray-600">Total Groups</p>
-                <p class="text-lg font-semibold text-gray-700"><%= bots.reduce((sum, bot) => sum + (bot.group_count || 0), 0) %></p>
+            <div class="ml-5">
+                <p class="mb-1 text-sm font-semibold text-gray-500 uppercase tracking-wider">Total Groups</p>
+                <div class="flex items-baseline gap-2">
+                    <p class="text-3xl font-extrabold text-gray-800"><%= bots.reduce((sum, bot) => sum + (bot.group_count || 0), 0) %></p>
+                    <span class="text-xs font-medium text-whatsapp bg-whatsapp-light/10 px-2 py-0.5 rounded-full">Shared</span>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-    <div class="p-6 border-b border-gray-100">
-        <h3 class="text-lg font-semibold text-gray-800">Bot Sessions</h3>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Recent Activity -->
+    <div class="lg:col-span-1">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden h-full">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                <h3 class="text-lg font-bold text-gray-800">Recent Activity</h3>
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <div class="p-6">
+                <% if(recentGroups.length === 0) { %>
+                    <div class="text-center py-8">
+                        <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                        </div>
+                        <p class="text-gray-400 text-sm italic">No recent activity found.</p>
+                    </div>
+                <% } else { %>
+                    <div class="space-y-6">
+                        <% recentGroups.forEach(group => { %>
+                        <div class="flex gap-4 relative">
+                            <!-- Timeline line -->
+                            <div class="absolute left-[19px] top-10 bottom-[-24px] w-0.5 bg-gray-100 last:hidden"></div>
+                            
+                            <div class="relative z-10 flex-shrink-0 w-10 h-10 rounded-full bg-whatsapp-light/10 border-4 border-white flex items-center justify-center text-whatsapp shadow-sm">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-bold text-gray-800 truncate"><%= group.group_name %></p>
+                                <p class="text-xs text-gray-500 mb-1">Via: <%= group.phone_number %></p>
+                                <span class="text-[10px] text-gray-400 font-medium"><%= new Date(group.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) %></span>
+                            </div>
+                        </div>
+                        <% }) %>
+                    </div>
+                <% } %>
+            </div>
+        </div>
     </div>
+
+    <!-- Bot Sessions Table -->
+    <div class="lg:col-span-2">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden h-full">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                <h3 class="text-lg font-bold text-gray-800">Bot Sessions</h3>
+                <span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-bold ring-1 ring-blue-100"><%= bots.length %> Total</span>
+            </div>
     <div class="overflow-x-auto">
         <table class="w-full text-left">
             <thead class="bg-gray-50 text-gray-600 text-xs uppercase font-semibold">

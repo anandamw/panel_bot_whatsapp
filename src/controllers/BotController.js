@@ -8,7 +8,15 @@ export const index = async (req, res) => {
             FROM bots b 
             ORDER BY created_at DESC
         `);
-        res.render('index', { title: 'Dashboard', bots });
+        const [recentGroups] = await db.query(`
+            SELECT g.*, b.phone_number 
+            FROM bot_groups g
+            JOIN bots b ON g.session_id = b.session_id
+            ORDER BY g.created_at DESC 
+            LIMIT 5
+        `);
+
+        res.render('index', { title: 'Dashboard', bots, recentGroups });
     } catch (error) {
         console.error(error);
         res.render('index', { title: 'Dashboard', bots: [] });
